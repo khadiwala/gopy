@@ -1,4 +1,4 @@
-from collections import namedtuple, deque
+from collections import namedtuple, deque, defaultdict, Counter
 
 
 class Go(object):
@@ -47,6 +47,29 @@ class Go(object):
             seen.add(friend)
         return seen
 
+    def adjacent_color_map(self, group):
+        ''' Return a dict with number of intersections
+            adjacent to this group for each color
+        '''
+        bycolor = defaultdict(set)
+        for p in group:
+            for nbr in self.neighbors(p):
+                bycolor[p.c].add(nbr)
+        return {k: len(v) for (k, v) in bycolor.items()}
+
+    def score(self):
+        to_visit = set(self.Point(x, y, c) for y, l in enumerate(self.board) for x, c in enumerate(l))
+        scores = Counter()
+        while to_visit:
+            p = to_visit.pop()
+            if p.c == self.colors["none"]:
+                also_empty = self.friends(p)
+                to_visit -= also_empty
+                scores.update(self.adjacent_color_map(also_empty))
+            else:
+                scores.update([p.c])
+        return dict(scores)
+
     def liberties(self, p):
         ''' Return number of liberties for the group attached with p'''
         def _lib(p2):
@@ -60,6 +83,8 @@ class Go(object):
             return "proposed play not on board"
         if self.board[p.y][p.x] != self.colors["none"]:
             return "occupied territory"
+        if self.liberties(p) == 0:
+            return "You have too much to live for"
         self.board[p.y][p.x] = self.colors[p.c]
         return "ok"
 
@@ -72,9 +97,16 @@ if __name__ == '__main__':
     print(a.play("white", 4, 4))
     print(a.play("white", 4, 5))
     print(a.play("white", 4, 6))
-    print(a.play("white", 5, 6))
+    print(a.play("white", 4, 7))
+    print(a.play("white", 5, 7))
+    print(a.play("white", 6, 7))
+    print(a.play("white", 6, 6))
+    print(a.play("white", 6, 5))
+    print(a.play("white", 5, 5))
     print(a.liberties(a.Point(4, 4, "b")))
     print(a.liberties(a.Point(4, 5, "w")))
     print(a.liberties(a.Point(4, 6, "w")))
     print(a.liberties(a.Point(5, 6, "w")))
     print a
+    print(a.adjacent_color_map([a.Point(4, 5, "w")]))
+    print(a.score())
